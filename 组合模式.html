@@ -1,0 +1,197 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title></title>
+	<meta charset="utf-8" />
+</head>
+<body>
+    <button id="button">点击</button>
+    <script>
+
+        //更强大的宏命令
+        var MacroCommand = function () {
+            return {
+                commandsList: [],
+                add: function (command) {
+                    this.commandsList.push(command)
+                },
+                execute: function () {
+                    for (var i=0, command; command = this.commandsList[i++];) {
+                        command.execute();
+                    }
+                }
+            }
+        }
+
+        //创建一个命令对象
+        var openAcCommand = {
+            add:function(){ //为了发错误的操作，起到提醒作用
+                throw new Error('这是一个命令，不添加命令');
+            },
+            execute: function () {
+                console.log('打开空调');
+            }
+        }
+
+        //创建一个命令对象
+        var openTvCommand = {
+            add: function () { //为了发错误的操作，起到提醒作用
+                throw new Error('这是一个命令，不添加命令');
+            },
+            execute: function () {
+                console.log('打开电视机');
+            }
+        }
+        //创建一个命令对象
+        var openSoundCommand = {
+            add: function () { //为了发错误的操作，起到提醒作用
+                throw new Error('这是一个命令，不添加命令');
+            },
+            execute: function () {
+                console.log('打开音响');
+            }
+        }
+
+        //为了方便，可以打打开电视机和打开音响两个命令组合成一个命令
+        var macroCommand1 = new MacroCommand();
+        macroCommand1.add(openTvCommand);
+        macroCommand1.add(openSoundCommand);
+
+
+        /*继续创建一个关门，打开电脑和登录QQ的命令*/
+        var closeDoorCommand = {
+            add: function () { //为了发错误的操作，起到提醒作用
+                throw new Error('这是一个命令，不添加命令');
+            },
+            execute: function () {
+                console.log('关门');
+            }
+        }
+        var openPcCommand = {
+            add: function () { //为了发错误的操作，起到提醒作用
+                throw new Error('这是一个命令，不添加命令');
+            },
+            execute: function () {
+                console.log('打开电脑');
+            }
+        }
+        var openQQCommand = {
+            add: function () { //为了发错误的操作，起到提醒作用
+                throw new Error('这是一个命令，不添加命令');
+            },
+            execute: function () {
+                console.log('登录QQ');
+            }
+        }
+
+        //为了方便，可以打打开电脑 和 登录QQ两个命令组合成一个命令
+        var macroCommand2 = new MacroCommand();
+        macroCommand2.add(openPcCommand);
+        macroCommand2.add(openQQCommand);
+
+
+        //为了更大的方便，可以所有命令组合成一个命令
+        var macroCommand3 = new MacroCommand();
+        macroCommand3.add(openAcCommand);    //添加一个打开空调命令
+        macroCommand3.add(macroCommand1);     //添加一个打开电视机和打开音响的组合命令
+        macroCommand3.add(closeDoorCommand);  //添加一个关门命令
+        macroCommand3.add(macroCommand2);     //添加一个打开电脑和登录QQ的组合命令
+
+
+        //绑定命令
+        var setCommand = (function (command) {
+            document.getElementById('button').onclick = function () {
+                command.execute();
+            }
+        })(macroCommand3); //这里可以传入单个命令或组合命令
+
+
+
+
+
+
+
+
+        //例如声明一个文件夹
+        var Folder = function (name) {
+            this.name = name;
+            this.parent = null;
+            this.files=[]
+        }
+        //给文件夹添加另一个文件夹或添加一个文件
+        Folder.prototype.add = function (file) {
+            file.parent = this;
+            this.files.push(file);
+        }
+        //扫描当前文件夹，和它的子文件夹，或子文件
+        Folder.prototype.scan = function () {
+            console.log('开始扫描文件夹: ' + this.name);
+            for (var i = 0, file, files = this.files; file = files[i++];) {
+                file.scan();
+            }
+        }
+        //移除文件夹或文件
+        Folder.prototype.remove = function () {
+            if (!this.parent) {
+                return;
+            }
+            for (var files = this.parent.files, l = files.length - 1; l >= 0; l--) {
+                var file = files[l];
+                if (file === this) {
+                    files.splice(l, 1);
+                }
+            }
+        }   
+
+
+        //例如声明一个文件
+        var file = function (name) {
+            this.name = name;
+            this.parent = null;
+        }
+        //给文件添加一个添加方法，因为文件是最低层的了，所有该方法不能调用
+        file.prototype.add = function () {
+            throw new Error('不能添加在文件下面');
+        }
+        //扫描文件自身
+        file.prototype.scan = function () {
+            console.log('开始扫描文件夹: ' + this.name);
+        }
+        //移除文件
+        file.prototype.remove = function () {
+            if (!this.parent) {
+                return;
+            }
+            for (var files = this.parent.files, l = files.length - 1; l >= 0; l--) {
+                var file = files[l];
+                if (file === this) {
+                    files.splice(l, 1);
+                }
+            }
+        }
+
+        //实例三个文件夹
+        var folder = new Folder('学习资料');
+        var folder1 = new Folder('javascript');
+        var file1 = new Folder('深入浅出node.js');
+
+        //给folder1文件夹添加一个文件
+        folder1.add(new file('javascript设计模式与开发'));
+        //把folder1文件夹添加到 folder文件夹里
+        folder.add(folder1);
+        //把file1文件夹添加到 folder文件夹里
+        folder.add(file1);
+
+        //在folder文件夹里把folder1文件夹移除，注意只是把folder1对象从folder移出，但folder1对象本身并没有删除
+        folder1.remove();
+
+        //扫描folder1文件夹
+        folder1.scan();
+
+        //扫描 folder文件夹
+        folder.scan();
+
+    </script>
+</body>
+</html>

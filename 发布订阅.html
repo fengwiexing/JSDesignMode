@@ -1,0 +1,167 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title></title>
+	<meta charset="utf-8" />
+ 
+</head>
+<body>
+    
+    <script src="jquery-1-11-1.js"></script>
+    <script>
+        //发布-订阅，对象写法
+        var Event = (function () {
+            var global = this,
+                Event,
+                _default = 'default';
+
+            Event = function () {
+                var _listen,
+                    _trigger,
+                    _remove,
+                    _slice = Array.prototype.slice,
+                    _shift = Array.prototype.shift,
+                    _unshift = Array.prototype.unshift,
+                    namespaceCache = {},
+                    _create,
+                    find,
+                    each = function (ary, fn) {
+                        var ret;
+                        for (var i = 0, l = ary.length; i < l; i++) {
+                            var n = ary[i];
+                            ret = fn.call(n, i, n);
+                        }
+                        return ret;
+                    }
+
+                _listen = function (key, fn, cache) { //订阅事件
+                    if (!cache[key]) {
+                        cache[key] = [];
+                    }
+                    cache[key].push(fn);
+                }
+
+                _remove = function (key, cache, fn) {//移除订阅事件所有函数，或订阅事件的某一函数
+                    var atyKey = cache[key];
+                    if (atyKey) {
+                        if (fn) {
+                            for (var i = 0, ary = atyKey.length; i < ary; i++) {
+                                if (atyKey[i] === fn) {
+                                    atyKey.splice(i, 1);
+                                }
+                            }
+                        } else {
+                            atyKey.length = 0;
+                        }
+                    }
+                }
+
+                _trigger = function () {   //发布事件
+                    var cache = _shift.call(arguments),
+                        key = _shift.call(arguments),
+                        args = arguments,
+                        _self = this,
+                        ret,
+                        stack = cache[key];
+                    if (!stack || !stack.length) {
+                        return;
+                    }
+
+                    return each(stack, function () {
+                        return this.apply(_self, args);
+                    });
+                }
+                //命名空间
+                _create = function (namespace) {
+                    var namespace = namespace || _default;//命名空间
+                    var cache = {},    //保存订阅事件的对象
+                        offlineStack = [],//离线事件
+                        ret = {
+                            listen: function (key, fn, last) { //订阅事件last参数代表是否执行最后一条离线发布事件，如果没有该参数就执行所有离线发布事件
+                                _listen(key, fn, cache);      //执行订阅事件
+                                if (offlineStack === null) {  //如果没有保存的之前的发布事件就返回
+                                    return;
+                                }
+                                if (last === 'last') {
+                                    offlineStack.length && offlineStack.pop()();
+                                } else {
+                                    each(offlineStack, function () { //这是一次性执行同一命名空间的所有离线的发布事件，同一个命名空间只执行一次离线发布事件
+                                        //1点 注意离线发布事件，只要后面在同一命名空间下，第一次订阅任何事件，都将发布同一命名空间的所有离线事件 ，2点 只有同一命名空间的第一次订阅和离线发布相同的事件才能收到离线发布消息，
+                                        this();
+                                    });
+                                }
+                                offlineStack = null;//只要执行过同一命名空间的订阅事件都将同一命名空间的所有离线事件清空
+                            },
+                            one: function (key, fn, last) { //移除指定事件，从新订阅该事件
+                                _remove(key, cache);        //移除同一个事件的所有函数
+                                this.listen(key, fn, last); //重新订阅该事件，
+                            },
+                            remove: function (key, fn) {   //移除指定事件所有函数，或指定事件的某个函数
+                                _remove(key, cache, fn);
+                            },
+                            trigger: function () { //发布事件
+                                var fn,
+                                    args,
+                                    _self = this;
+                                _unshift.call(arguments, cache);//cache对象，如果还没订阅事件，就是空对象，如果有订阅，就保存有订阅事件
+                                args = arguments;
+                                fn = function () {
+                                    return _trigger.apply(_self, args); //执行发布事件
+                                };
+
+                                if (offlineStack) {                //如果该事件还没有订阅
+                                    return offlineStack.push(fn);  //保存还没订阅过的发布事件
+                                }
+                                return fn(); //如果该事件有订阅就直接发布
+                            }
+                        };
+                    return namespace ? (namespaceCache[namespace] ? namespaceCache[namespace] : namespaceCache[namespace] = ret) : ret;
+
+                };
+
+                return {
+                    create: _create,
+                    one: function (key, fn, last) {
+                        var event = this.create();
+                        event.one(key, fn, last);
+                    },
+                    remove: function (key, fn) {
+                        var event = this.create();
+                        event.remove(key, fn);
+                    },
+                    listen: function (key, fn, last) {
+                        var event = this.create();
+                        event.listen(key, fn, last);
+                    },
+                    trigger: function () {
+                        var event = this.create();
+                        event.trigger.apply(this, arguments);
+                    }
+                };
+            }();
+            return Event;
+        })();
+
+
+        //先发布 注意先发布后订阅的方式，如果没有命名空间的，或同一个命名空间只能一次定阅先发布 后订阅
+        Event.trigger('uu', 333);
+        //后订阅
+        Event.listen('uu', function (e) {
+            console.log(e);
+        })
+
+        //使用命名空间
+
+        Event.create('namespace1').listen('kkk', function (e) { console.log(e) });
+        Event.create('namespace1').remove('kkk');//移除了namespace1的kkk事件
+        Event.create('namespace1').trigger('kkk', 'namespace1')
+
+        //先发布 订阅事件相同，但命名空间不同；
+        Event.create('namespace2').trigger('kkk', 'namespace2');
+        //后订阅
+        Event.create('namespace2').listen('kkk', function (e) { console.log(e) });
+    </script>
+ 
+</body>
+</html>
