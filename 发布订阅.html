@@ -10,7 +10,52 @@
     
     <script src="jquery-1-11-1.js"></script>
     <script>
+
+
         //发布-订阅，对象写法
+        //只能先订阅，再发布
+        var Event1 = function () {
+            var eventObj = {};
+            return {
+                listen: function (type, fn) {
+                    if (!eventObj[type]) {
+                        eventObj[type] = [];
+                    }
+                    eventObj[type].push(fn);
+                },
+                trigger: function () {
+                    var event = [].shift.call(arguments),
+                    evnet2 = eventObj[event];
+                    if (evnet2) {
+                        for (var i = 0, k = evnet2.length; i < k; i++) {
+                            evnet2[i].apply(this, arguments);
+                        }
+                    }
+                },
+                remove: function (key,fn) {
+                    var event = eventObj[key];
+                    if (event) {
+                        if (!fn) {
+                            event.length = 0;
+                            return;
+                        } else {
+                            for (var i = 0, k = event.length; i < k; i++) {
+                                if (event[i] === fn) {
+                                    event.splice(i, 1);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }();
+        Event1.listen('hh', uu = function (d) { console.log(d) });
+        Event1.listen('hh', function (d) { console.log(d + "99") });
+        Event1.remove('hh', uu);
+        Event1.trigger('hh', 888);
+
+
+        //这种方式可以是先发布，后订阅的写法
         var Event = (function () {
             var global = this,
                 Event,
